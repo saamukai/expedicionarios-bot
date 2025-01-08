@@ -4,10 +4,6 @@ Este é um projeto desenvolvido para suprir as necessidades do da minha comunida
 ### 📞 Link do Servidor
 [Expedicionaŕios]()
 
-## 🚀 Começando
-Essas instruções permitirão que você obtenha uma cópia do projeto em operação na sua máquina local para fins de desenvolvimento e teste.
-
-
 ## 🛠️ Construído com
 * Python
 * discord.py - Lib utilizada
