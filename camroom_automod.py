@@ -2,9 +2,9 @@ from discord.ext import tasks
 
 from utils import msg_time
 
-MOVE_USER_SOURCE_CHANNEL_ID = int('MOVE_USER_SOURCE_CHANNEL_ID')
-MOVE_USER_TARGET_CHANNEL_ID = int('MOVE_USER_TARGET_CHANNEL_ID')
-MOVE_USER_LOOP_INTERVAL = 2
+MOVE_USER_SOURCE_CHANNEL_ID = int('ID_CHANNEL')
+MOVE_USER_TARGET_CHANNEL_ID = int('ID_CHANNEL')
+MOVE_USER_LOOP_INTERVAL = 3
 
 
 @tasks.loop(minutes=MOVE_USER_LOOP_INTERVAL)
@@ -23,20 +23,13 @@ async def move_users(BOT, GUILD_ID):
                         message = (
                                 f'**[MODERAÇÃO EXPEDICIONÁRIOS]** Olá **{member.name}**,'
                                 'o canal **"WEBCAM/TELA ON"** é apenas para câmeras ou'
-                                'streams ligadas. Portanto, você foi movido para sala'
-                                '**"GERAL"**.'
+                                'streams ligadas, dessa forma motivaremos uns aos outros'
+                                'quando realmente estivermos estudando.' 
+                                'Portanto, você foi movido para sala **"GERAL"**, mas fique a vontade '
+                                'para voltar e ligar a câmera ou compartilhar a tela.'
                         )
                         await member.send(message)
-    
                     except Exception as e:
                         print(f'{msg_time()} MOVE_USER: ERRO AO ENVIAR MENSAGEM: {member.name}\n ERRO: {e}')
-    
     else:
         print(f'{msg_time()} MOVE_USER: SOURCE_CHANNEL OU TARGET_CHANNEL INVÁLIDO.')
-
-    
-
- 
-            
-        
-
