@@ -4,71 +4,83 @@ import discord
 import requests
 from bs4 import BeautifulSoup
 from discord.ext import tasks
-
 from utils import msg_time
 
-CON_BR_CHANNEL_ID = int('ID_CHANNEL')
+CON_BR_CHANNEL_ID = int('CHANNEL_ID')
 CON_BR_URL = 'https://concursosnobrasil.com/'
-CON_BR_ROLE_NOTICIA_ID = int('ID_ROLE')
-CON_BR_LOOP_INTERVAL_MIN = 15
+ROLE_NEWS_ID = int('ROLE_ID')
+CON_BR_LOOP_INTERVAL_MIN = 10
+last_request_time = ''
 
-tempo_ultima_noticia = ''
-
-@tasks.loop(minutes=CON_BR_LOOP_INTERVAL_MIN)
-async def concursos_brasil(BOT, GUILD_ID):
-    global tempo_ultima_noticia
-
-    guild = BOT.get_guild(GUILD_ID)
-    channel = guild.get_channel(CON_BR_CHANNEL_ID)
+async def get_recents_contests():
     response = requests.get(CON_BR_URL)
-    role_noticias = guild.get_role(CON_BR_ROLE_NOTICIA_ID)
     soup = BeautifulSoup(response.text, 'html.parser')
+    recents_contests = soup.select_one('.recentes-container')
+    return recents_contests.children
 
-    concursos_recentes = soup.select_one('.recentes-container')
-    description = []
+def filter_contests(contests):
+    global last_request_time
+    contests_to_publish = []  
+    
+    if not last_request_time:
+        last_request_time = datetime.now()
 
-    if not tempo_ultima_noticia:
-        tempo_ultima_noticia = datetime.now()
-
-    for article in concursos_recentes.children:
-        link = article.select_one('a')['href']
-        localidade = article.select_one('.sigla').text.strip()
-        titulo = article.select_one('.post-title').text.strip()
-        tempo = article.select_one('time').text.strip()
-        author = article.select_one('span > span').text.strip()
-
-        tempo_article = datetime.strptime(
-            tempo, "%d/%m/%Y às %Hh%M"
-        )
-
-        if tempo_article < tempo_ultima_noticia:
+    for article in contests:
+        article_time = article.select_one('time').text.strip()
+        article_time_formated = datetime.strptime(article_time, "%d/%m/%Y às %Hh%M")
+        
+        if article_time_formated < last_request_time: #artigo antigo/já publicado
             continue
 
-        description.append(
-            f"## [{localidade} - {titulo}]({link})\n{tempo} por {author}"
-        )
+        title_article = article.select_one('.post-title').text.strip()
 
-    tempo_ultima_noticia = datetime.now()
+        if ('seletivo' in title_article.lower() or 
+            'prefeitura' in title_article.lower() or
+            'seleção' in title_article.lower() or
+            'simplificado' in title_article.lower()):
+            print(f'{msg_time()} NOTÍCIAS CONCURSOS: Concurso de setivo/prefeitura não publicado')
+            continue
 
-    time = datetime.now().strftime('%Y-%m-%d %H:%M')
+        link = article.select_one('a')['href']
+        location = article.select_one('.sigla').text.strip()
+        author = article.select_one('span > span').text.strip()
+        
+        new_contest = f'## [{location} - {title_article}]({link})\n {article_time} por {author}'
+        contests_to_publish.append(new_contest)
+    
+    last_request_time = datetime.now()
+    return contests_to_publish
 
-    if len(description) <= 0:
-        print(f'{msg_time()} NOTICIAS CONCURSOS: Sem notícias recentes.')
-        return
-    else:
-        print(f'{msg_time()} NOTICIAS CONCURSOS: Nova notícia publicada')
-
+def make_embed_contest(contest):
+    global last_request_time
     embed = discord.Embed(
-        title=f'📢 Concursos Brasil - Notícias Recentes" [{time}]',  # noqa: E501
+        title=f'📢 Concursos Brasil - Notícias Recentes [{last_request_time.strftime('%d/%m/%Y %H:%M')}]',
         url=CON_BR_URL,
-        color=discord.Color.green(),
-        description="\n".join(description)
+        color=discord.Color.yellow(),
+        description="".join(contest)
     )
 
     embed.set_footer(text="[MENSAGEM AUTOMÁTICA] pelo @Bot Expedicionário")
     embed.set_thumbnail(
-        url='https://i.ibb.co/KyTkq14/concursos-brasil.jpg'  # noqa: E501
+        url='https://i.ibb.co/KyTkq14/concursos-brasil.jpg' 
     )
+    return embed
 
-    await channel.send(f'{role_noticias.mention}', embed=embed)
+@tasks.loop(minutes=CON_BR_LOOP_INTERVAL_MIN)
+async def alert_new_contest(BOT, GUILD_ID):
+    recents_contests = await get_recents_contests()
+    contests_to_publish = filter_contests(recents_contests)
 
+    if len(contests_to_publish) == 0:
+        print(f'{msg_time()} NOTICIAS CONCURSOS: Sem notícias recentes.')
+        return
+    else:
+        guild = BOT.get_guild(GUILD_ID)
+        channel = guild.get_channel(CON_BR_CHANNEL_ID)
+        role_noticias = guild.get_role(ROLE_NEWS_ID)
+        
+        for contest in contests_to_publish:
+            embed_to_publish = make_embed_contest(contest)
+            await channel.send(f'{role_noticias.mention}', embed=embed_to_publish)
+            print(f'{msg_time()} NOTICIAS CONCURSOS: Nova notícia publicada')
+        return 
