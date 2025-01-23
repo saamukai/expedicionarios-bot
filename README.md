@@ -7,4 +7,4 @@ Este é um projeto desenvolvido para suprir as necessidades do da minha comunida
 ## 🛠️ Construído com
 * Python
 * discord.py - Lib utilizada
-* Crédito ao [vinimartinsc](https://github.com/Vinimartinsc) que fez o webscraping que identifica novos concusos no site [Concursos no Brasil](https://concursosnobrasil.com/) que eu adaptei para alertar no discord.
+* beatifoulsoup4 - lib utilizada para fazer webscraping
